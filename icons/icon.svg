@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="听音室">
+  <rect width="512" height="512" fill="#0e1012"/>
+  <g fill="none" stroke="#2fd6a5" stroke-width="20" stroke-linecap="round">
+    <path d="M314.5 181.1A95 95 0 0 1 314.5 330.9" opacity="0.8"/>
+    <path d="M197.5 330.9A95 95 0 0 1 197.5 181.1" opacity="0.8"/>
+    <path d="M351.4 133.9A155 155 0 0 1 351.4 378.1" opacity="0.45"/>
+    <path d="M152.3 371.2A155 155 0 0 1 152.3 140.8" opacity="0.45"/>
+  </g>
+  <circle cx="256" cy="256" r="33" fill="#2fd6a5"/>
+</svg>

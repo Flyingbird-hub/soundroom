@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1012">
+<meta name="description" content="听音室 - 本地音乐播放器，支持上传本地音乐、播放列表、离线使用。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>听音室 · 本地音乐播放器</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5-13-7.5Z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.2" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 20 9 12l10-8v16Z"/><path d="M5 19V5"/>
+  </symbol>
+  <symbol id="i-next" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m5 4 10 8-10 8V4Z"/><path d="M19 5v14"/>
+  </symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/>
+    <path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6A4 4 0 0 1 16.027 6H22"/>
+    <path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"/><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"/>
+  </symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+    <path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>
+  </symbol>
+  <symbol id="i-repeat-one" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+    <path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/><path d="M11 10h1v4"/>
+  </symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+  </symbol>
+  <symbol id="i-volume-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </symbol>
+  <symbol id="i-volume-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+  </symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>
+  </symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+  </symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+  </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+  </symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <path d="M10 11v6"/><path d="M14 11v6"/>
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+  </symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m6 9 6 6 6-6"/>
+  </symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>
+  </symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m15 3h6v6"/><path d="m9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>
+  </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>
+    <path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+  </symbol>
+  <symbol id="i-music-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+  </symbol>
+</svg>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark"><svg class="icon"><use href="#i-note"></use></svg></span>
+      <span class="brand-text">
+        <strong>听音室</strong>
+        <small>本地音乐播放器</small>
+      </span>
+    </div>
+
+    <nav class="nav" aria-label="曲库分类">
+      <button class="nav-item is-active" data-view="all">
+        <svg class="icon"><use href="#i-list"></use></svg>
+        <span>全部歌曲</span>
+        <em class="nav-count" data-count="all">0</em>
+      </button>
+      <button class="nav-item" data-view="favorites">
+        <svg class="icon"><use href="#i-heart"></use></svg>
+        <span>我的收藏</span>
+        <em class="nav-count" data-count="favorites">0</em>
+      </button>
+      <button class="nav-item" data-view="recent">
+        <svg class="icon"><use href="#i-clock"></use></svg>
+        <span>最近播放</span>
+        <em class="nav-count" data-count="recent">0</em>
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="storage">
+        <div class="storage-head"><span>已用空间</span><span id="storageText">—</span></div>
+        <div class="storage-bar"><div class="storage-fill" id="storageFill"></div></div>
+      </div>
+      <button class="btn btn-ghost btn-block" id="folderBtn">
+        <svg class="icon"><use href="#i-folder"></use></svg>
+        <span>导入整个文件夹</span>
+      </button>
+      <p class="sidebar-hint" id="persistHint"></p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="brand brand-mobile">
+        <span class="brand-mark"><svg class="icon"><use href="#i-note"></use></svg></span>
+        <strong>听音室</strong>
+      </div>
+      <div class="search">
+        <svg class="icon"><use href="#i-search"></use></svg>
+        <input type="search" id="search" placeholder="搜索歌曲、歌手或专辑" autocomplete="off" aria-label="搜索曲库">
+        <button class="search-clear" id="searchClear" title="清除" aria-label="清除搜索" hidden>
+          <svg class="icon"><use href="#i-x"></use></svg>
+        </button>
+      </div>
+      <select id="sort" class="select" aria-label="排序方式">
+        <option value="added">最近添加</option>
+        <option value="title">按标题</option>
+        <option value="artist">按歌手</option>
+        <option value="duration">按时长</option>
+      </select>
+      <button class="btn btn-primary" id="uploadBtn">
+        <svg class="icon"><use href="#i-upload"></use></svg>
+        <span class="btn-label">添加音乐</span>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
+        <svg class="icon"><use href="#i-sun"></use></svg>
+      </button>
+    </header>
+
+    <nav class="chips" id="chips" aria-label="曲库分类">
+      <button class="chip is-active" data-view="all">全部歌曲 <em data-count="all">0</em></button>
+      <button class="chip" data-view="favorites">收藏 <em data-count="favorites">0</em></button>
+      <button class="chip" data-view="recent">最近播放 <em data-count="recent">0</em></button>
+    </nav>
+
+    <div class="listhead" id="listhead">
+      <span class="col-index">#</span>
+      <span class="col-title">标题</span>
+      <span class="col-album">专辑</span>
+      <span class="col-like"></span>
+      <span class="col-time">时长</span>
+      <span class="col-actions"></span>
+    </div>
+
+    <section class="listwrap">
+      <ul class="tracklist" id="tracklist"></ul>
+
+      <div class="empty" id="empty" hidden>
+        <div class="empty-art"><svg class="icon"><use href="#i-music-off"></use></svg></div>
+        <h2 id="emptyTitle">曲库还是空的</h2>
+        <p id="emptyText">把手机或电脑里的音乐加进来，就能在这里连续播放。</p>
+        <div class="empty-actions">
+          <button class="btn btn-primary" id="emptyUpload">
+            <svg class="icon"><use href="#i-upload"></use></svg>
+            <span>添加音乐</span>
+          </button>
+          <button class="btn btn-ghost" id="emptyFolder">
+            <svg class="icon"><use href="#i-folder"></use></svg>
+            <span>导入文件夹</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="player" id="player">
+  <div class="mini-progress" aria-hidden="true"><div class="mini-progress-fill" id="miniProgress"></div></div>
+
+  <div class="np-mini" id="npMini" role="button" tabindex="0" aria-label="展开播放页">
+    <div class="np-art np-art-sm" id="miniArt"></div>
+    <div class="np-meta">
+      <span class="np-title" id="miniTitle">还没有播放</span>
+      <span class="np-sub" id="miniSub">添加本地音乐后即可播放</span>
+    </div>
+  </div>
+
+  <div class="player-center">
+    <div class="controls controls-main">
+      <button class="icon-btn" id="shuffleBtn" title="随机播放" aria-label="随机播放">
+        <svg class="icon"><use href="#i-shuffle"></use></svg>
+      </button>
+      <button class="icon-btn" id="prevBtn" title="上一首" aria-label="上一首">
+        <svg class="icon"><use href="#i-prev"></use></svg>
+      </button>
+      <button class="icon-btn play-btn" id="playBtn" title="播放 / 暂停" aria-label="播放或暂停">
+        <svg class="icon"><use href="#i-play"></use></svg>
+      </button>
+      <button class="icon-btn" id="nextBtn" title="下一首" aria-label="下一首">
+        <svg class="icon"><use href="#i-next"></use></svg>
+      </button>
+      <button class="icon-btn" id="repeatBtn" title="循环模式" aria-label="循环模式">
+        <svg class="icon"><use href="#i-repeat"></use></svg>
+      </button>
+    </div>
+    <div class="seekrow">
+      <span class="time" id="curTime">0:00</span>
+      <input type="range" class="range" id="seek" min="0" max="1000" step="1" value="0" aria-label="播放进度">
+      <span class="time" id="durTime">0:00</span>
+    </div>
+  </div>
+
+  <div class="player-right">
+    <button class="btn-rate" id="rateBtn" title="播放速度">1.0x</button>
+    <button class="icon-btn" id="muteBtn" title="静音" aria-label="静音">
+      <svg class="icon"><use href="#i-volume"></use></svg>
+    </button>
+    <input type="range" class="range range-vol" id="volume" min="0" max="100" step="1" value="100" aria-label="音量">
+    <button class="icon-btn only-wide" id="expandBtn" title="展开播放页" aria-label="展开播放页">
+      <svg class="icon"><use href="#i-expand"></use></svg>
+    </button>
+  </div>
+</footer>
+
+<div class="now-playing" id="nowPlaying" hidden>
+  <div class="np-panel">
+    <header class="np-head">
+      <button class="icon-btn" id="npClose" title="收起" aria-label="收起">
+        <svg class="icon"><use href="#i-chevron-down"></use></svg>
+      </button>
+      <span class="np-head-title">正在播放</span>
+      <button class="icon-btn heart-btn" id="npFav" title="收藏" aria-label="收藏">
+        <svg class="icon"><use href="#i-heart"></use></svg>
+      </button>
+    </header>
+
+    <canvas class="visualizer" id="visualizer" width="600" height="120"></canvas>
+
+    <div class="np-art np-art-lg" id="npArt"></div>
+
+    <div class="np-info">
+      <h2 id="npTitle">还没有播放</h2>
+      <p id="npSub">添加本地音乐后即可播放</p>
+    </div>
+
+    <div class="seekrow seekrow-lg">
+      <span class="time" id="npCurTime">0:00</span>
+      <input type="range" class="range" id="npSeek" min="0" max="1000" step="1" value="0" aria-label="播放进度">
+      <span class="time" id="npDurTime">0:00</span>
+    </div>
+
+    <div class="controls controls-lg">
+      <button class="icon-btn" id="npShuffle" title="随机播放" aria-label="随机播放"><svg class="icon"><use href="#i-shuffle"></use></svg></button>
+      <button class="icon-btn" id="npPrev" title="上一首" aria-label="上一首"><svg class="icon"><use href="#i-prev"></use></svg></button>
+      <button class="icon-btn play-btn play-btn-lg" id="npPlay" title="播放 / 暂停" aria-label="播放或暂停"><svg class="icon"><use href="#i-play"></use></svg></button>
+      <button class="icon-btn" id="npNext" title="下一首" aria-label="下一首"><svg class="icon"><use href="#i-next"></use></svg></button>
+      <button class="icon-btn" id="npRepeat" title="循环模式" aria-label="循环模式"><svg class="icon"><use href="#i-repeat"></use></svg></button>
+    </div>
+  </div>
+</div>
+
+<div class="drop-overlay" id="dropOverlay" hidden>
+  <div class="drop-box">
+    <svg class="icon"><use href="#i-upload"></use></svg>
+    <strong>松开即可导入音乐</strong>
+    <span>支持 MP3 / FLAC / M4A / WAV / OGG 等格式</span>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<input type="file" id="fileInput" accept="audio/*,.mp3,.flac,.m4a,.aac,.wav,.ogg,.oga,.opus,.wma,.aiff" multiple hidden>
+<input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+
+<script src="js/id3.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
