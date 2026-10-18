@@ -130,6 +130,26 @@ function migrateFromLegacy() {
 
 migrateFromLegacy();
 
+/* 补丁：lyrics/ 目录下与歌曲 id 同名的 .lrc，自动补入数据库（仅当该歌歌词缺省时）。
+ * 兼容旧版清单里没有 lyricsFile 字段、但歌词文件已随项目同步到服务器的情况。 */
+function patchLyricsFromFiles() {
+  let files = [];
+  try { files = fs.readdirSync(LYRICS_DIR); } catch (err) { return; }
+  let rows = [];
+  try { rows = db.prepare('SELECT id, lyrics FROM songs WHERE lyrics IS NULL OR lyrics = ?').all(''); } catch (err) { return; }
+  let n = 0;
+  for (const row of rows) {
+    const lf = row.id + '.lrc';
+    if (!files.includes(lf)) continue;
+    try {
+      const txt = fs.readFileSync(path.join(LYRICS_DIR, lf), 'utf8');
+      if (txt && txt.trim()) { stmt.lyrics.run(txt, row.id); n++; }
+    } catch (err) { /* 忽略 */ }
+  }
+  if (n) console.log('[数据库] 自动补录歌词 ' + n + ' 首');
+}
+patchLyricsFromFiles();
+
 function rowToSong(s) {
   return {
     id: s.id, file: s.file, name: s.name,
