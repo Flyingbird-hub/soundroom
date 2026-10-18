@@ -707,3 +707,72 @@ input, select, button { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ===== 管理权限弹窗 + 共享标识 ===== */
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(2px);
+  padding: 20px;
+}
+
+.admin-panel {
+  width: min(360px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.admin-panel h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.admin-panel p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-panel input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+
+.admin-panel input[type="password"]:focus {
+  border-color: var(--accent);
+}
+
+.admin-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.admin-actions .btn { min-width: 84px; }
+
+.badge-shared {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--accent);
+  background: var(--accent-soft);
+  vertical-align: 1px;
+}

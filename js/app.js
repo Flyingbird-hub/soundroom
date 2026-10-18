@@ -25,6 +25,8 @@
   };
 
   var localStorageFallback = {};
+  var sharedState = {};            // 共享曲目的收藏/播放记录：serverId -> {favorite,lastPlayedAt,playCount}
+  var adminToken = '';
   var objectUrls = { audio: null, covers: {} };
   var coverQueue = [];
   var coverLoading = 0;
@@ -56,6 +58,11 @@
     emptyUpload: $('#emptyUpload'),
     emptyFolder: $('#emptyFolder'),
     themeBtn: $('#themeBtn'),
+    adminModal: $('#adminModal'),
+    adminPass: $('#adminPass'),
+    adminOk: $('#adminOk'),
+    adminCancel: $('#adminCancel'),
+    adminHint: $('#adminHint'),
     storageText: $('#storageText'),
     storageFill: $('#storageFill'),
     persistHint: $('#persistHint'),
@@ -177,6 +184,86 @@
     return DB.setSetting(key, value);
   }
 
+  /* ================= 管理权限（共享曲库） ================= */
+
+  function getAdminToken() {
+    try { return localStorage.getItem('sr-admin-token') || ''; } catch (err) { return ''; }
+  }
+
+  function setAdminToken(token) {
+    adminToken = token;
+    try {
+      if (token) localStorage.setItem('sr-admin-token', token);
+      else localStorage.removeItem('sr-admin-token');
+    } catch (err) { /* 隐私模式等场景忽略 */ }
+    renderAdminHint();
+  }
+
+  function renderAdminHint() {
+    if (!el.adminHint) return;
+    el.adminHint.textContent = adminToken
+      ? '管理权限已开启：可上传 / 删除共享音乐'
+      : '上传共享音乐需管理密码，上传后所有人可听';
+  }
+
+  function openAdminModal(onOk, onCancel) {
+    el.adminModal.hidden = false;
+    el.adminPass.value = '';
+    setTimeout(function () { el.adminPass.focus(); }, 30);
+    var done = false;
+    function close() {
+      if (done) return;
+      done = true;
+      el.adminModal.hidden = true;
+    }
+    el.adminOk.onclick = function () { var v = el.adminPass.value; close(); onOk(v); };
+    el.adminCancel.onclick = function () { close(); if (onCancel) onCancel(); };
+    el.adminPass.onkeydown = function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        var v = el.adminPass.value;
+        close();
+        onOk(v);
+      } else if (event.key === 'Escape') {
+        close();
+        if (onCancel) onCancel();
+      }
+    };
+  }
+
+  function adminLogin() {
+    return new Promise(function (resolve, reject) {
+      openAdminModal(function (password) {
+        if (!password) { reject(new Error('cancel')); return; }
+        fetch('api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: password })
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) { return { ok: res.ok, data: data }; });
+        }).then(function (r) {
+          if (r.ok && r.data.token) {
+            setAdminToken(r.data.token);
+            resolve(r.data.token);
+          } else {
+            toast('管理密码错误');
+            reject(new Error('auth-failed'));
+          }
+        }).catch(function () {
+          toast('无法连接服务器');
+          reject(new Error('network'));
+        });
+      }, function () { reject(new Error('cancel')); });
+    });
+  }
+
+  function ensureAdmin() {
+    if (adminToken) return Promise.resolve(adminToken);
+    adminToken = getAdminToken();
+    if (adminToken) return Promise.resolve(adminToken);
+    return adminLogin();
+  }
+
   /* ================= library ================= */
 
   function visibleTracks() {
@@ -221,6 +308,7 @@
         '<div class="cell-title">' + art +
           '<div class="title-text">' +
             '<span class="track-title">' + escapeHtml(track.title) + '</span>' +
+            (track.source === 'shared' ? '<em class="badge-shared">共享</em>' : '') +
             '<span class="track-artist">' + escapeHtml(track.artist) + '</span>' +
           '</div>' +
         '</div>' +
@@ -296,6 +384,10 @@
   }
 
   function ensureCoverUrl(id) {
+    var track = byId(id);
+    if (track && track.source === 'shared') {
+      return track.coverUrl ? Promise.resolve(track.coverUrl) : Promise.resolve(null);
+    }
     if (objectUrls.covers[id]) return Promise.resolve(objectUrls.covers[id]);
     if (!state.idbOk) return Promise.resolve(null);
     return DB.getAudio(id).then(function (row) {
@@ -333,7 +425,31 @@
 
   function probeDuration(id) {
     var track = byId(id);
-    if (!track || track.duration || !state.idbOk) return Promise.resolve();
+    if (!track || track.duration) return Promise.resolve();
+    if (track.source === 'shared') {
+      return new Promise(function (resolve) {
+        var probe = new Audio();
+        var done = false;
+        function finish(duration) {
+          if (done) return;
+          done = true;
+          probe.src = '';
+          if (duration && isFinite(duration)) {
+            track.duration = duration;
+            saveSharedMeta(track, { duration: duration });
+            var cell = el.tracklist.querySelector('[data-id="' + id + '"] .cell-time');
+            if (cell) cell.textContent = formatTime(duration);
+          }
+          resolve();
+        }
+        probe.addEventListener('loadedmetadata', function () { finish(probe.duration); });
+        probe.addEventListener('error', function () { finish(null); });
+        setTimeout(function () { finish(null); }, 12000);
+        probe.preload = 'metadata';
+        probe.src = track.url;
+      });
+    }
+    if (!state.idbOk) return Promise.resolve();
     return DB.getAudio(id).then(function (row) {
       if (!row || !row.audio) return;
       return new Promise(function (resolve) {
@@ -447,6 +563,149 @@
     }
   }
 
+  /* ================= 共享曲库 ================= */
+
+  function saveSharedState() {
+    return savePref('sharedState', sharedState);
+  }
+
+  function saveSharedMeta(track, patch) {
+    if (!track || track.source !== 'shared') return;
+    sharedState[track.serverId] = Object.assign(sharedState[track.serverId] || {}, patch);
+    saveSharedState();
+  }
+
+  function stripExt(name) {
+    var base = String(name || '').replace(/\.[^.]+$/, '').trim();
+    return base || '未命名歌曲';
+  }
+
+  async function loadSharedLibrary() {
+    var res;
+    try { res = await fetch('api/songs'); }
+    catch (err) { return 0; }
+    if (!res.ok) return 0;
+    var data;
+    try { data = await res.json(); }
+    catch (err) { return 0; }
+
+    var seen = {};
+    state.tracks.forEach(function (t) { seen[t.id] = true; });
+    var added = 0;
+    (data.songs || []).forEach(function (s) {
+      var id = 'shared-' + s.id;
+      if (seen[id]) return;
+      var st = sharedState[s.id] || {};
+      state.tracks.push({
+        id: id,
+        serverId: s.id,
+        source: 'shared',
+        url: 'music/' + s.file,
+        coverUrl: s.coverUrl || null,
+        title: s.title || s.name || s.file,
+        artist: s.artist || '未知歌手',
+        album: s.album || '',
+        duration: s.duration || 0,
+        size: s.size || 0,
+        addedAt: s.addedAt || 0,
+        favorite: !!st.favorite,
+        lastPlayedAt: st.lastPlayedAt || 0,
+        playCount: st.playCount || 0,
+        hasCover: !!s.coverUrl
+      });
+      seen[id] = true;
+      added++;
+    });
+
+    if (added) {
+      render();
+      var need = state.tracks.filter(function (t) { return t.source === 'shared' && !t.duration; }).map(function (t) { return t.id; });
+      durationQueue = durationQueue.concat(need);
+      pumpDurations();
+    }
+    return added;
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () { reject(reader.error); };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadShared(files) {
+    var list = Array.prototype.slice.call(files).filter(isAudioFile);
+    if (!list.length) { toast('没有发现可用的音频文件'); return; }
+
+    var token;
+    try { token = await ensureAdmin(); }
+    catch (err) {
+      if (err.message !== 'cancel') toast('需要管理权限才能上传');
+      return;
+    }
+
+    var ok = 0, failed = 0;
+    toast('正在上传 0/' + list.length + '…', { id: 'up', sticky: true });
+
+    for (var i = 0; i < list.length; i++) {
+      var file = list[i];
+      try {
+        var tags = await Tags.read(file);
+        var meta = {
+          title: tags.title || stripExt(file.name),
+          artist: tags.artist || '未知歌手',
+          album: tags.album || ''
+        };
+        if (tags.cover) {
+          var coverBlob = new Blob([tags.cover.bytes], { type: tags.cover.mime });
+          meta.coverDataUrl = await blobToDataURL(coverBlob);
+        }
+
+        function uploadAudio(tok) {
+          return fetch('api/upload', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + tok,
+              'X-File-Name': encodeURIComponent(file.name),
+              'Content-Type': file.type || 'application/octet-stream'
+            },
+            body: file
+          });
+        }
+
+        var upRes = await uploadAudio(token);
+        if (upRes.status === 401) {
+          setAdminToken('');
+          token = await adminLogin();
+          upRes = await uploadAudio(token);
+        }
+        if (!upRes.ok) throw new Error('HTTP ' + upRes.status);
+        var up = await upRes.json();
+
+        var metaRes = await fetch('api/songs/' + up.id + '/meta', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(meta)
+        });
+        if (!metaRes.ok) throw new Error('HTTP ' + metaRes.status);
+        ok++;
+      } catch (err) {
+        if (err.message === 'cancel') break;
+        failed++;
+        console.warn('[soundroom] 上传失败', file.name, err);
+      }
+      updateToast('up', '正在上传 ' + (i + 1) + '/' + list.length + '…');
+    }
+
+    removeToast('up');
+    await loadSharedLibrary();
+    render();
+    renderAdminHint();
+    toast(ok ? '已上传 ' + ok + ' 首，所有人现在都能听到' : (failed ? '上传失败 ' + failed + ' 首' : ''));
+  }
+
   /* ================= playback ================= */
 
   function ensureGraph() {
@@ -468,6 +727,19 @@
   function loadTrack(id, autoplay) {
     var track = byId(id);
     if (!track) return;
+    if (track.source === 'shared') {
+      if (objectUrls.audio) { URL.revokeObjectURL(objectUrls.audio); objectUrls.audio = null; }
+      audio.src = track.url;
+      audio.playbackRate = state.rate;
+      audio.volume = state.muted ? 0 : state.volume;
+      state.currentId = id;
+      render();
+      renderPlayerArt();
+      updateMediaSession(track);
+      if (autoplay !== false) play();
+      else updatePlayButtons();
+      return;
+    }
     if (!state.idbOk) { toast('当前打开方式无法读取音频'); return; }
 
     DB.getAudio(id).then(function (row) {
@@ -554,7 +826,11 @@
     if (!track) return;
     track.lastPlayedAt = Date.now();
     track.playCount = (track.playCount || 0) + 1;
-    DB.patchMeta(id, { lastPlayedAt: track.lastPlayedAt, playCount: track.playCount }).catch(function () {});
+    if (track.source === 'shared') {
+      saveSharedMeta(track, { lastPlayedAt: track.lastPlayedAt, playCount: track.playCount });
+    } else {
+      DB.patchMeta(id, { lastPlayedAt: track.lastPlayedAt, playCount: track.playCount }).catch(function () {});
+    }
   }
 
   /* ================= rendering: player ================= */
@@ -669,7 +945,9 @@
   }
 
   function refreshStorage() {
-    var total = state.tracks.reduce(function (sum, t) { return sum + (t.size || 0); }, 0);
+    var total = state.tracks.reduce(function (sum, t) {
+      return sum + (t.source === 'shared' ? 0 : (t.size || 0));
+    }, 0);
     el.storageText.textContent = formatBytes(total);
     if (navigator.storage && navigator.storage.estimate) {
       navigator.storage.estimate().then(function (est) {
@@ -687,7 +965,7 @@
       el.persistHint.textContent = '当前以本地文件方式打开，无法保存曲库。请用网址访问（如 http://localhost:8000）。';
       return;
     }
-    el.persistHint.textContent = '音乐保存在这台设备的浏览器里，不会被上传到网络。';
+    el.persistHint.textContent = '共享曲库存在服务器（本项目目录），所有人可见；本机导入的音乐只存在这台设备。';
     try {
       if (navigator.storage && navigator.storage.persist) {
         var persisted = await navigator.storage.persisted();
@@ -798,7 +1076,7 @@
     el.emptyUpload.addEventListener('click', function () { el.fileInput.click(); });
     el.folderBtn.addEventListener('click', function () { el.folderInput.click(); });
     el.emptyFolder.addEventListener('click', function () { el.folderInput.click(); });
-    el.fileInput.addEventListener('change', function () { importFiles(el.fileInput.files); el.fileInput.value = ''; });
+    el.fileInput.addEventListener('change', function () { uploadShared(el.fileInput.files); el.fileInput.value = ''; });
     el.folderInput.addEventListener('change', function () { importFiles(el.folderInput.files); el.folderInput.value = ''; });
 
     document.querySelectorAll('.nav-item').forEach(function (btn) {
@@ -1021,37 +1299,77 @@
     var track = byId(id);
     if (!track) return;
     track.favorite = !track.favorite;
-    DB.patchMeta(id, { favorite: track.favorite }).catch(function () {});
+    if (track.source === 'shared') {
+      saveSharedMeta(track, { favorite: track.favorite });
+    } else {
+      DB.patchMeta(id, { favorite: track.favorite }).catch(function () {});
+    }
     renderNowPlaying();
     render();
     toast(track.favorite ? '已加入收藏' : '已取消收藏');
   }
 
+  function clearCurrentTrackUI() {
+    pause();
+    audio.removeAttribute('src');
+    state.currentId = null;
+    el.miniTitle.textContent = '还没有播放';
+    el.miniSub.textContent = '添加本地音乐后即可播放';
+    el.npTitle.textContent = '还没有播放';
+    el.npSub.textContent = '添加本地音乐后即可播放';
+    el.miniArt.dataset.art = '';
+    el.npArt.dataset.art = '';
+    el.miniArt.removeAttribute('style');
+    el.npArt.removeAttribute('style');
+    el.miniArt.innerHTML = '<svg class="icon"><use href="#i-note"></use></svg>';
+    el.npArt.innerHTML = '<svg class="icon"><use href="#i-note"></use></svg>';
+    updateProgress();
+  }
+
+  function deleteSharedTrack(track) {
+    ensureAdmin().then(function (token) {
+      return fetch('api/songs/' + track.serverId, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+    }).then(function (res) {
+      if (res.status === 401) {
+        setAdminToken('');
+        return adminLogin().then(function (token2) {
+          return fetch('api/songs/' + track.serverId, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token2 } });
+        });
+      }
+      return res;
+    }).then(function (res) {
+      if (!res.ok) { toast('删除失败'); return; }
+      state.tracks = state.tracks.filter(function (t) { return t.id !== track.id; });
+      delete sharedState[track.serverId];
+      saveSharedState();
+      if (objectUrls.covers[track.id]) {
+        URL.revokeObjectURL(objectUrls.covers[track.id]);
+        delete objectUrls.covers[track.id];
+      }
+      if (state.currentId === track.id) clearCurrentTrackUI();
+      render();
+      refreshStorage();
+      toast('已从共享曲库删除');
+    }).catch(function (err) {
+      if (err && err.message === 'cancel') return;
+      toast('删除失败');
+    });
+  }
+
   function removeTrack(id) {
     var track = byId(id);
     if (!track) return;
+    if (track.source === 'shared') {
+      deleteSharedTrack(track);
+      return;
+    }
     DB.removeTrack(id).then(function () {
       state.tracks = state.tracks.filter(function (t) { return t.id !== id; });
       if (objectUrls.covers[id]) {
         URL.revokeObjectURL(objectUrls.covers[id]);
         delete objectUrls.covers[id];
       }
-      if (state.currentId === id) {
-        pause();
-        audio.removeAttribute('src');
-        state.currentId = null;
-        el.miniTitle.textContent = '还没有播放';
-        el.miniSub.textContent = '添加本地音乐后即可播放';
-        el.npTitle.textContent = '还没有播放';
-        el.npSub.textContent = '添加本地音乐后即可播放';
-        el.miniArt.dataset.art = '';
-        el.npArt.dataset.art = '';
-        el.miniArt.removeAttribute('style');
-        el.npArt.removeAttribute('style');
-        el.miniArt.innerHTML = '<svg class="icon"><use href="#i-note"></use></svg>';
-        el.npArt.innerHTML = '<svg class="icon"><use href="#i-note"></use></svg>';
-        updateProgress();
-      }
+      if (state.currentId === id) clearCurrentTrackUI();
       render();
       refreshStorage();
       toast('已从曲库删除');
@@ -1089,6 +1407,8 @@
     state.rate = Number(prefs.rate) || 1;
     state.volume = typeof prefs.volume === 'number' ? prefs.volume : 1;
     state.muted = !!prefs.muted;
+    adminToken = getAdminToken();
+    if (prefs.sharedState && typeof prefs.sharedState === 'object') sharedState = prefs.sharedState;
 
     applyTheme();
     applyModes();
@@ -1101,6 +1421,7 @@
     bindEvents();
     bindMediaSession();
     setupPersistence();
+    renderAdminHint();
 
     if (state.idbOk) {
       try {
@@ -1118,6 +1439,8 @@
 
     refreshStorage();
     updateProgress();
+
+    loadSharedLibrary();
 
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       navigator.serviceWorker.register('sw.js').catch(function () {});

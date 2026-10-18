@@ -4,3 +4,10 @@
 .DS_Store
 Thumbs.db
 
+# 共享曲库（用户上传内容 + 管理配置，不要提交到仓库）
+music/
+library.json
+server-config.json
+
+server.log.err
+tunnel.log.err

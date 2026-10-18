@@ -132,6 +132,7 @@
         <svg class="icon"><use href="#i-folder"></use></svg>
         <span>导入整个文件夹</span>
       </button>
+      <p class="sidebar-hint" id="adminHint"></p>
       <p class="sidebar-hint" id="persistHint"></p>
     </div>
   </aside>
@@ -157,7 +158,7 @@
       </select>
       <button class="btn btn-primary" id="uploadBtn">
         <svg class="icon"><use href="#i-upload"></use></svg>
-        <span class="btn-label">添加音乐</span>
+        <span class="btn-label">上传音乐</span>
       </button>
       <button class="icon-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
         <svg class="icon"><use href="#i-sun"></use></svg>
@@ -189,7 +190,7 @@
         <div class="empty-actions">
           <button class="btn btn-primary" id="emptyUpload">
             <svg class="icon"><use href="#i-upload"></use></svg>
-            <span>添加音乐</span>
+            <span>上传音乐</span>
           </button>
           <button class="btn btn-ghost" id="emptyFolder">
             <svg class="icon"><use href="#i-folder"></use></svg>
@@ -291,6 +292,18 @@
     <svg class="icon"><use href="#i-upload"></use></svg>
     <strong>松开即可导入音乐</strong>
     <span>支持 MP3 / FLAC / M4A / WAV / OGG 等格式</span>
+  </div>
+</div>
+
+<div class="admin-modal" id="adminModal" hidden>
+  <div class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <h3 id="adminTitle">管理权限验证</h3>
+    <p>上传或删除共享音乐需要管理密码。共享音乐存在服务器上，所有人可见。</p>
+    <input type="password" id="adminPass" placeholder="请输入管理密码" autocomplete="current-password">
+    <div class="admin-actions">
+      <button class="btn btn-ghost" id="adminCancel" type="button">取消</button>
+      <button class="btn btn-primary" id="adminOk" type="button">确认</button>
+    </div>
   </div>
 </div>
 
