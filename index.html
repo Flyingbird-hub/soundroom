@@ -15,6 +15,9 @@
 </head>
 <body>
 
+<div class="bg-image" id="bgImage" aria-hidden="true"></div>
+<div class="bg-aura" aria-hidden="true"></div>
+
 <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true" focusable="false">
   <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
@@ -67,6 +70,13 @@
   <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
   </symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+    <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+  </symbol>
+  <symbol id="i-lyrics" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 6h16"/><path d="M4 11h16"/><path d="M4 16h9"/><circle cx="17.5" cy="16" r="2.5"/><path d="M15.5 21v-4l4 2.2"/>
+  </symbol>
   <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
     <path d="M10 11v6"/><path d="M14 11v6"/>
@@ -92,6 +102,9 @@
   </symbol>
   <symbol id="i-music-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+  </symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
   </symbol>
 </svg>
 
@@ -162,6 +175,12 @@
       </button>
       <button class="icon-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
         <svg class="icon"><use href="#i-sun"></use></svg>
+      </button>
+      <button class="icon-btn" id="viewBtn" title="切换视图" aria-label="切换视图">
+        <svg class="icon"><use href="#i-grid"></use></svg>
+      </button>
+      <button class="icon-btn" id="bgBtn" title="背景" aria-label="背景">
+        <svg class="icon"><use href="#i-image"></use></svg>
       </button>
     </header>
 
@@ -256,15 +275,31 @@
       <button class="icon-btn" id="npClose" title="收起" aria-label="收起">
         <svg class="icon"><use href="#i-chevron-down"></use></svg>
       </button>
-      <span class="np-head-title">正在播放</span>
-      <button class="icon-btn heart-btn" id="npFav" title="收藏" aria-label="收藏">
-        <svg class="icon"><use href="#i-heart"></use></svg>
-      </button>
+      <span class="np-head-title"><b>正在播放</b></span>
+      <div class="np-head-actions">
+        <button class="icon-btn" id="npLyricsBtn" title="歌词" aria-label="歌词">
+          <svg class="icon"><use href="#i-lyrics"></use></svg>
+        </button>
+        <button class="icon-btn heart-btn" id="npFav" title="收藏" aria-label="收藏">
+          <svg class="icon"><use href="#i-heart"></use></svg>
+        </button>
+      </div>
     </header>
 
     <canvas class="visualizer" id="visualizer" width="600" height="120"></canvas>
 
-    <div class="np-art np-art-lg" id="npArt"></div>
+    <div class="np-stage">
+      <div class="vinyl" id="npVinyl">
+        <div class="vinyl-disc"></div>
+        <div class="np-art np-art-lg vinyl-center" id="npArt"></div>
+        <div class="vinyl-hole"></div>
+      </div>
+
+      <div class="lyrics" id="lyricsPanel" hidden>
+        <div class="lyrics-box" id="lyricsBox"></div>
+        <button class="btn btn-ghost lyrics-edit-btn" id="lyricsEditBtn" type="button">编辑歌词</button>
+      </div>
+    </div>
 
     <div class="np-info">
       <h2 id="npTitle">还没有播放</h2>
@@ -307,7 +342,52 @@
   </div>
 </div>
 
+<div class="bg-modal" id="bgModal" hidden>
+  <div class="bg-panel" role="dialog" aria-modal="true" aria-labelledby="bgModalTitle">
+    <div class="bg-panel-head">
+      <h3 id="bgModalTitle">选择背景</h3>
+      <button class="icon-btn" id="bgClose" title="关闭" aria-label="关闭">
+        <svg class="icon"><use href="#i-x"></use></svg>
+      </button>
+    </div>
+    <p>背景会同时用于主界面和播放页（播放音乐时）。</p>
+    <div class="bg-grid" id="bgGrid"></div>
+    <div class="bg-row">
+      <span>填充方式</span>
+      <div class="seg" id="bgFitSeg">
+        <button type="button" data-fit="cover">裁剪填充</button>
+        <button type="button" data-fit="contain">完整显示</button>
+      </div>
+    </div>
+    <div class="bg-row">
+      <span>暗化程度</span>
+      <div class="seg" id="bgDimSeg">
+        <button type="button" data-dim="0.32">浅</button>
+        <button type="button" data-dim="0.55">中</button>
+        <button type="button" data-dim="0.75">深</button>
+      </div>
+    </div>
+    <div class="admin-actions">
+      <button class="btn btn-ghost" id="bgOff" type="button">不使用背景</button>
+      <button class="btn btn-primary" id="bgDone" type="button">完成</button>
+    </div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="lyrics-modal" id="lyricsModal" hidden>
+  <div class="lyrics-panel" role="dialog" aria-modal="true" aria-labelledby="lyricsModalTitle">
+    <h3 id="lyricsModalTitle">编辑歌词</h3>
+    <p>支持 LRC 时间轴格式（<code>[mm:ss.xx]</code>）或纯文本，每行一句。时间轴格式可同步高亮。</p>
+    <textarea id="lyricsText" spellcheck="false" placeholder="[00:00.00]第一句歌词&#10;[00:04.50]第二句歌词"></textarea>
+    <div class="admin-actions">
+      <button class="btn btn-ghost" id="lyricsCancel" type="button">取消</button>
+      <button class="btn btn-ghost" id="lyricsClear" type="button">清空</button>
+      <button class="btn btn-primary" id="lyricsSave" type="button">保存</button>
+    </div>
+  </div>
+</div>
 
 <input type="file" id="fileInput" accept="audio/*,.mp3,.flac,.m4a,.aac,.wav,.ogg,.oga,.opus,.wma,.aiff" multiple hidden>
 <input type="file" id="folderInput" webkitdirectory directory multiple hidden>

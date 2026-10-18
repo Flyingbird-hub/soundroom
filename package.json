@@ -1,0 +1,17 @@
+﻿{
+    "name":  "soundroom",
+    "version":  "1.0.0",
+    "description":  "听音室 - 音乐分享站：本地音乐播放器 + 共享曲库（SQLite 存储元数据与歌词）",
+    "main":  "serve.js",
+    "scripts":  {
+                    "start":  "node serve.js"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "dependencies":  {
+                         "better-sqlite3":  "^13.0.3"
+                     }
+}

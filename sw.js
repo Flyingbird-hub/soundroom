@@ -1,5 +1,5 @@
 /* 听音室 - 离线缓存。音乐文件存在 IndexedDB 里，不经过这里。 */
-var CACHE = 'soundroom-shell-v3';
+var CACHE = 'soundroom-shell-v4';
 var SHELL = [
   './',
   './index.html',

@@ -4,10 +4,18 @@
 .DS_Store
 Thumbs.db
 
+# 依赖
+node_modules/
+
 # 共享曲库（用户上传内容 + 管理配置，不要提交到仓库）
 music/
 library.json
 server-config.json
+
+# SQLite 数据库（服务器本地数据，与 music/ 同理不走 git）
+soundroom.db
+soundroom.db-wal
+soundroom.db-shm
 
 server.log.err
 tunnel.log.err
